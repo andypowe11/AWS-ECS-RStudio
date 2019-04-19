@@ -1,0 +1,64 @@
+Description: >
+  RStudio EFS shared storage
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+    Default: RStudio
+
+  VPCStackName:
+    Description: Provide the name of the VPC stack that has been deployed
+    Type: String
+
+  SecurityGroupStackName:
+    Description: Provide the name of the Security Group stack that has been deployed
+    Type: String
+
+Resources:
+  EFSFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: generalPurpose
+      FileSystemTags:
+      - Key: Name
+        Value: !Sub ${EnvironmentName}-EFS-Volume
+
+  EFSMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: EFSFileSystem
+      SecurityGroups:
+        - Fn::ImportValue:
+           !Sub ${SecurityGroupStackName}-EFSSecurityGroup
+      SubnetId:
+        Fn::Select:
+        - 0
+        - Fn::Split:
+          - ','
+          - Fn::ImportValue:
+              !Sub ${VPCStackName}-PrivateSubnets
+
+  EFSMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: EFSFileSystem
+      SecurityGroups:
+        - Fn::ImportValue:
+           !Sub ${SecurityGroupStackName}-EFSSecurityGroup
+      SubnetId:
+        Fn::Select:
+        - 1
+        - Fn::Split:
+          - ','
+          - Fn::ImportValue:
+              !Sub ${VPCStackName}-PrivateSubnets
+
+Outputs:
+  EFSFileSystem:
+    Description: A reference to the EFS filesystem
+    Value: !Ref EFSFileSystem
+    Export:
+      Name: !Sub ${AWS::StackName}-EFSFileSystem
